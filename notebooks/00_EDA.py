@@ -2,7 +2,10 @@
 
 import pandas as pd 
 from pyspark.sql import SparkSession 
+from tqdm import tqdm 
 
+# %% [markdown]
+    # # 0.0 Reading Dataset     
 spark = (
     SparkSession
         .builder
@@ -34,19 +37,150 @@ print("Spark Session created successfully.")
 # %%
 # Leitura do dataset 
 
-dataset_path ''
+df_application = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/application_train.csv")
+)
 
-df = (
+df_bureau = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/bureau.csv")
+)
+
+df_bureau_balance = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/bureau_balance.csv")
+)
+
+df_credit_card_balance = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/credit_card_balance.csv")
+)
+
+df_installments_payments = (
     spark
         .read
         .option("header", "true")
         .option("inferSchema", "true")
         .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/installments_payments.csv")
 )
+
+df_pos_cash_balance = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/POS_CASH_balance.csv")
+)
+
+df_previous_applications = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/previous_application.csv")
+)
+
+df_sample_submission = (
+    spark
+        .read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/sample_submission.csv")
+)
+
 # %%
-df.count()
+
+datasets = [df_application, df_bureau, df_bureau_balance, df_credit_card_balance, df_installments_payments, df_pos_cash_balance, df_previous_applications, df_sample_submission]
+datasets_idx = ['application', 'bureau', 'bureau_balance', 'credit_card_balance', 'installments_payments', 'pos_cash_balance', 'previous_applications', 'sample_submission']
+
+
 # %%
-df.limit(5).show()
+for idx, dataset in enumerate(datasets):
+    print(f"Dataset: {datasets_idx[idx]}")
+    print(f"Number of rows: {dataset.count()}")
+    print(f"Number of columns: {len(dataset.columns)}")
+    print(f"Schema:")
+    dataset.printSchema()
+    print("\n")
 # %%
-df.printSchema()
+df_application.show(5)
 # %%
+df_dict = pd.read_csv("/home/p123/Documents/DS/datasets/home-credit-default-risk/HomeCredit_columns_description.csv" , 
+                      sep = ',',
+                      encoding = 'latin-1')
+df_dict.head(5)
+df_dict[df_dict.Table == 'application_{train|test}.csv']
+
+# ---------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------
+# %% [markdown]
+## 1.0 EDA 
+
+# ### 1.1 - Análise de contexto 
+# **Objetivo:** Compreender o contexto de negocio dos dados da home Credit Risk Default.  
+
+# %% [markdown]
+#### 1.1.1 - Applications dataset 
+
+# %%
+
+df_application.columns 
+
+# %% 
+
+def get_dataset_sample_set(
+        df ,
+        n_samples : int = 5 ) -> dict:
+    '''
+    returns a dictionary with the column names as keys and a list 
+    of n_samples distinct values for each column as values.
+    '''
+    df.show(5)
+    samples = {}
+    print('Recovering samples for each column...')
+    for col in tqdm(df.columns): 
+        samples[col] = [row[col] for row in df.select(col).distinct().limit(5).collect()] 
+
+    return samples 
+
+# %% 
+samples = get_dataset_sample_set(df_application, 
+                                 n_samples = 5)
+
+# %%
+samples
+
+# %%
+df_application.describe().show()
+
+# %%
+
+df_application_bureau = (df_application
+    .join(
+        df_bureau, 
+        on = 'SK_ID_CURR', 
+        how = 'outer',
+    )
+)
+
+print(f'before the join: {df_application.count()} | {df_bureau.count()}')
+print(f'after the join: {df_application_bureau.count()}')
+
+df_application_bureau.groupby('SK_ID_CURR').count().show(5)
+
+# %%
+df_application_
