@@ -153,7 +153,7 @@ def get_dataset_sample_set(
     samples = {}
     print('Recovering samples for each column...')
     for col in tqdm(df.columns): 
-        samples[col] = [row[col] for row in df.select(col).distinct().limit(5).collect()] 
+        samples[col] = [row[col] for row in df.select(col).distinct().limit(n_samples).collect()] 
 
     return samples 
 
@@ -167,6 +167,74 @@ samples
 # %%
 df_application.describe().show()
 
+
+
+# %% 
+df_application.select('TARGET').groupBy('TARGET').count().show()
+
+# ------------------------------------------------
+# -----------------------------------------------
+# %% [markdown]
+#### 1.1 - Identificando nulos
+#  
+
+# %%
+#df_application_describe.limit(1).select(c).collect()[0][c]
+
+# %%
+def getNotNullColumns(df):
+    '''
+    Summarizes the percentage of non-null values for each column in a Spark DataFrame.
+    Returns a Dataframe with columns 'tx_notNulls' sorted in descending order, 
+    filtered to include only columns with less than 100% non-null values.
+    '''
+    samples = df.count()
+    df_describe = df.describe()
+    df_nulls = {}
+
+    for c in tqdm(df.columns): 
+        notNulls = df_describe.limit(1).select(c).collect()[0][c]
+        tx_notNulls = round(int(notNulls)/samples,2)*100 
+        df_nulls[c] = tx_notNulls
+
+
+    df_nulls = (
+                            pd.DataFrame(df_nulls, 
+                                    index = ['tx_notNulls']).
+                                    T.
+                                    sort_values(by = 'tx_notNulls', 
+                                                ascending = False)
+        )
+    df_nulls = df_nulls[df_nulls['tx_notNulls'] < 100]
+    return df_nulls
+
+
+# %%
+applications_nulls = getNotNullColumns(df_application)
+
+# %%
+
+applications_nulls = applications_nulls[applications_nulls['tx_notNulls'] < 100]
+print(len(applications_nulls))
+applications_nulls
+
+# %% [markdown]
+# Ha uma grande ocorrencia de features relacionadas a appartments/buildings com mais de 50% de dados nulos. 
+# Irei buscar a interpretacao de que se esses nulos nao foram consequencia do cliente nao possuir um imovel, caso 
+# se confirme, podemos considerar a imputacao desses nulos por 0, ou seja, 0 metros, 0 media de apartments etc. 
+# 
+
+# %%
+df_application.select('FLAG_OWN_REALTY').groupBy('FLAG_OWN_REALTY').count().show()
+
+# %%
+df_application_not_realty = df_application.filter("FLAG_OWN_REALTY == 'Y'")
+df_application_not_realty_nulls = getNotNullColumns(df_application_not_realty)
+df_application_not_realty_nulls
+
+# %%
+
+len(df_application.columns)
 # %%
 
 df_application_bureau = (df_application
