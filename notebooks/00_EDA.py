@@ -1,8 +1,13 @@
+# %% [markdown]
+# 0.0 Imports 
 # %%
 
 import pandas as pd 
 from pyspark.sql import SparkSession 
 from tqdm import tqdm 
+import numpy as np 
+import seaborn as sns
+from matplotlib import pyplot as plt  
 
 # %% [markdown]
     # # 0.0 Reading Dataset     
@@ -18,22 +23,7 @@ spark = (
 print("Spark Session created successfully.")
 
 
-# %%markdown
 
-## 2.0 - Exploratory Data Analysis (EDA)
-### 2.1 - Hipoteses: 
-#
-#    1. Emprestimos feitos por pf , com justificativa comercial, possui uma mario expecativa deertorno. 
-#    2. Emprestimos feitos por clientes que atuam em certas areas do mercado, como ti possuem maior 
-#expectativa de retorno.
-#    3. Clientes pontuais tendem a ser pagadores mais confiaveis.
-#    4. Clientes com maior percentual de renda disponivel (50%) possuem maior chances de se formar
-#uma inadimplencia.
-#    5. Clientes que buscaram muitos emprestimos recentemnmente possuem menor chacenes de sere lresatados
-#    6. Clientes com emprestimos ate 30% de sua renda possuem 90% de confiança
-#    7. Clientes solteiros tendem a horar mais com seus emprestimos do que casados. 
-#    8. Clientes com filhos tem maior tendencia a ser inadimplentes.
-#    9. Clientes com mais de 3 emprestimos tem maior tendencia a ser inad
 # %%
 # Leitura do dataset 
 
@@ -218,6 +208,7 @@ applications_nulls = applications_nulls[applications_nulls['tx_notNulls'] < 100]
 print(len(applications_nulls))
 applications_nulls
 
+# %% []
 # %% [markdown]
 # Ha uma grande ocorrencia de features relacionadas a appartments/buildings com mais de 50% de dados nulos. 
 # Irei buscar a interpretacao de que se esses nulos nao foram consequencia do cliente nao possuir um imovel, caso 
@@ -250,5 +241,108 @@ print(f'after the join: {df_application_bureau.count()}')
 
 df_application_bureau.groupby('SK_ID_CURR').count().show(5)
 
+# %% [markdown]
+
+# ## 1.2 - Analise univariada 
+
+# %% [markdown]
+# ### 1.2.1 - Distribuicoes das variaveis numericas
+# Caso a variavel seja numerica e possua mais de 5 valores distintos, irei considerar a variavel como continua e analisar a distribuicao de seus valores.
+# Caso contrario sera classificada como categorica. 
+
 # %%
-df_application_
+import numpy as np 
+
+application_dtypes = dict(df_application.dtypes)
+distinct_dtypes = []
+for col in application_dtypes.keys(): 
+    distinct_dtypes.append(application_dtypes[col])
+
+np.unique(distinct_dtypes)
+
+
+# %%
+
+def get_column_types(df : pd.DataFrame, 
+                     threshold : int = 5) -> dict:
+    '''
+    returns a dict of two lists: 
+        "numerical"    :  with the names of continuous columns 
+        "categorical"  :  with the names of categorical columns.
+    '''
+
+    continuous_columns = []
+    categorical_columns = []
+
+    numerical_columns = [x for x in df.columns if dict(df.dtypes)[x] in ['int', 'double']]
+    print('Parsing dataset thats can leave some minutes...')
+    for col in tqdm(numerical_columns):
+         
+        n_distinct = df.select(col).distinct().count()
+
+        if n_distinct > threshold:
+            continuous_columns.append(col) 
+        else:
+            categorical_columns.append(col)
+
+    
+    return {
+        'numerical' : numerical_columns, 
+        'categorical' : categorical_columns
+    }  
+
+# %%
+
+applications_column_types = get_column_types(df_application)
+
+
+# %%
+
+print(f"Numerical   : {len(applications_column_types['numerical'])}")
+print(f"Categorical : {len(applications_column_types['categorical'])}")
+
+
+# %% [markdown]
+##### Pltoting the distribution of the continuous variables. 
+
+def show_numerical_distribution(df, numerical_columns):
+    for col in numerical_columns:
+        # 1. Define the figure size
+        plt.figure(figsize=(18, 4))
+        
+        # 2. BOXPLOT: Position 1 of 2
+        plt.subplot(1, 2, 1) # <--- Corrected this to be 1, 2, 1
+        sns.boxplot(x=df[col])
+        plt.title('Box Plot') # Optional: Add a title to the subplot
+        
+        # 3. HISTOGRAM: Position 2 of 2
+        plt.subplot(1, 2, 2) # <--- Corrected this to be 1, 2, 2
+        sns.histplot(x=df[col], kde=True)
+        plt.title('Histogram') # Optional: Add a title to the subplot
+        
+        # 4. Main title and display
+        plt.suptitle(f'Distribution of {col}', fontsize=16) # Using f-string for clarity
+        plt.tight_layout(rect=[0, 0, 1, 0.95]) # Adjust layout to prevent suptitle overlap
+        plt.show()
+
+show_numerical_distribution(
+    df = df_application, 
+    numerical_columns=applications_column_types['numerical']
+)
+# %%
+# %%markdown
+
+## 2.0 - Exploratory Data Analysis (EDA)
+### 2.1 - Hipoteses: 
+#
+#    1. Emprestimos feitos por pf , com justificativa comercial, possui uma mario expecativa deertorno. 
+#    2. Emprestimos feitos por clientes que atuam em certas areas do mercado, como ti possuem maior 
+#expectativa de retorno.
+#    3. Clientes pontuais tendem a ser pagadores mais confiaveis.
+#    4. Clientes com maior percentual de renda disponivel (50%) possuem maior chances de se formar
+#uma inadimplencia.
+#    5. Clientes que buscaram muitos emprestimos recentemnmente possuem menor chacenes de sere lresatados
+#    6. Clientes com emprestimos ate 30% de sua renda possuem 90% de confiança
+#    7. Clientes solteiros tendem a horar mais com seus emprestimos do que casados. 
+#    8. Clientes com filhos tem maior tendencia a ser inadimplentes.
+#    9. Clientes com mais de 3 emprestimos tem maior tendencia a ser inad
