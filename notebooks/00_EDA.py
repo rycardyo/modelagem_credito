@@ -301,6 +301,16 @@ applications_column_types = get_column_types(df_application)
 print(f"Numerical   : {len(applications_column_types['numerical'])}")
 print(f"Categorical : {len(applications_column_types['categorical'])}")
 
+# %%
+df_application.columns
+# %%
+
+df_application_sample = df_application.sampleBy('TARGET', fractions={0:0.3, 1:1} )
+df_application_sample.count()
+df_application_sample.groupBy('TARGET').agg({'SK_ID_CURR' : 'count'}).show()
+
+# %%
+df_application.groupBy('TARGET').agg({'SK_ID_CURR' : 'count'}).show()
 
 # %% [markdown]
 ##### Pltoting the distribution of the continuous variables. 
@@ -330,19 +340,5 @@ show_numerical_distribution(
     numerical_columns=applications_column_types['numerical']
 )
 # %%
-# %%markdown
 
-## 2.0 - Exploratory Data Analysis (EDA)
-### 2.1 - Hipoteses: 
-#
-#    1. Emprestimos feitos por pf , com justificativa comercial, possui uma mario expecativa deertorno. 
-#    2. Emprestimos feitos por clientes que atuam em certas areas do mercado, como ti possuem maior 
-#expectativa de retorno.
-#    3. Clientes pontuais tendem a ser pagadores mais confiaveis.
-#    4. Clientes com maior percentual de renda disponivel (50%) possuem maior chances de se formar
-#uma inadimplencia.
-#    5. Clientes que buscaram muitos emprestimos recentemnmente possuem menor chacenes de sere lresatados
-#    6. Clientes com emprestimos ate 30% de sua renda possuem 90% de confiança
-#    7. Clientes solteiros tendem a horar mais com seus emprestimos do que casados. 
-#    8. Clientes com filhos tem maior tendencia a ser inadimplentes.
-#    9. Clientes com mais de 3 emprestimos tem maior tendencia a ser inad
+# %%
